@@ -210,6 +210,22 @@ describe Chef::Runner do
     @first_resource.should be_updated
   end
 
+  it "should not execute delayed notifications marked :only_on_success when a failure occurs in the chef client run" do
+    @first_resource.action = :nothing
+    second_resource = Chef::Resource::Cat.new("peanut", @run_context)
+    second_resource.action = :purr
+
+    @run_context.resource_collection << second_resource
+    second_resource.notifies(:purr, @first_resource, :delayed, :only_on_success)
+
+    third_resource = FailureResource.new("explode", @run_context)
+    @run_context.resource_collection << third_resource
+
+    lambda {@runner.converge}.should raise_error(FailureProvider::ChefClientFail)
+
+    @first_resource.should_not be_updated
+  end
+
   it "should execute delayed notifications when a failure occurs in a notification" do
     @first_resource.action = :nothing
     second_resource = Chef::Resource::Cat.new("peanut", @run_context)
@@ -227,6 +243,25 @@ describe Chef::Runner do
     lambda {@runner.converge}.should raise_error(FailureProvider::ChefClientFail)
 
     @first_resource.should be_updated
+  end
+
+  it "should not execute delayed notifications marked :only_on_success when a failure occurs in a notification" do
+    @first_resource.action = :nothing
+    second_resource = Chef::Resource::Cat.new("peanut", @run_context)
+    second_resource.action = :purr
+
+    @run_context.resource_collection << second_resource
+
+    third_resource = FailureResource.new("explode", @run_context)
+    third_resource.action = :nothing
+    @run_context.resource_collection << third_resource
+
+    second_resource.notifies(:fail, third_resource, :delayed)
+    second_resource.notifies(:purr, @first_resource, :delayed, :only_on_success)
+
+    lambda {@runner.converge}.should raise_error(FailureProvider::ChefClientFail)
+
+    @first_resource.should_not be_updated
   end
 
   it "should execute delayed notifications when a failure occurs in multiple notifications" do
