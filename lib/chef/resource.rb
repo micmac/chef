@@ -35,7 +35,7 @@ require 'chef/mixin/deprecation'
 
 class Chef
   class Resource
-    class Notification < Struct.new(:resource, :action, :notifying_resource)
+    class Notification < Struct.new(:resource, :action, :notifying_resource, :only_on_success)
 
       def duplicates?(other_notification)
         unless other_notification.respond_to?(:resource) && other_notification.respond_to?(:action)
@@ -418,7 +418,7 @@ F
     end
 
     # Sets up a notification from this resource to the resource specified by +resource_spec+.
-    def notifies(action, resource_spec, timing=:delayed)
+    def notifies(action, resource_spec, timing=:delayed, only_on_success=false)
       # when using old-style resources(:template => "/foo.txt") style, you
       # could end up with multiple resources.
       resources = [ resource_spec ].flatten
@@ -428,7 +428,7 @@ F
 
         case timing.to_s
         when 'delayed'
-          notifies_delayed(action, resource)
+          notifies_delayed(action, resource, only_on_success)
         when 'immediate', 'immediately'
           notifies_immediately(action, resource)
         else
@@ -452,8 +452,8 @@ F
       run_context.notifies_immediately(Notification.new(resource_spec, action, self))
     end
 
-    def notifies_delayed(action, resource_spec)
-      run_context.notifies_delayed(Notification.new(resource_spec, action, self))
+    def notifies_delayed(action, resource_spec, only_on_success=false)
+      run_context.notifies_delayed(Notification.new(resource_spec, action, self, only_on_success))
     end
 
     def immediate_notifications
