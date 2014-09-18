@@ -96,10 +96,12 @@ class Chef
       collected_failures = Exceptions::MultipleFailures.new
       collected_failures.client_run_failure(error) unless error.nil?
       delayed_actions.each do |notification|
-        result = run_delayed_notification(notification)
-        if result.kind_of?(Exception)
-          collected_failures.notification_failure(result)
-        end
+        unless error and notification.only_on_success
+	  result = run_delayed_notification(notification)
+	  if result.kind_of?(Exception)
+	    collected_failures.notification_failure(result)
+	  end
+	end
       end
       collected_failures.raise!
     end
